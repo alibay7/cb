@@ -17,11 +17,11 @@ do
 	t) token=${OPTARG};;
 	:) 										  # If expected argument omitted:
 		echo "Error: -${OPTARG} requires an argument."
-		exit_abnormal                            
+		exit_abnormal
 		;;
 	*)                                         # If unknown (any other) option:
-		exit_abnormal                            
-		;; 
+		exit_abnormal
+		;;
  esac
 done
 
@@ -35,14 +35,15 @@ if [ -z "${url}" ] || [ -z "${token}" ]
 function banner(){
 
 cat << "EOF"
-   _____           _                 ____  _            _      _____                                      
-  / ____|         | |               |  _ \| |          | |    |  __ \                                     
- | |     __ _ _ __| |__   ___  _ __ | |_) | | __ _  ___| | __ | |__) |___  ___ _ __   ___  _ __  ___  ___ 
- | |    / _` | '__| '_ \ / _ \| '_ \|  _ <| |/ _` |/ __| |/ / |  _  // _ \/ __| '_ \ / _ \| '_ \/ __|/ _ \
- | |___| (_| | |  | |_) | (_) | | | | |_) | | (_| | (__|   <  | | \ \  __/\__ \ |_) | (_) | | | \__ \  __/
-  \_____\__,_|_|  |_.__/ \___/|_| |_|____/|_|\__,_|\___|_|\_\ |_|  \_\___||___/ .__/ \___/|_| |_|___/\___|
-                                                                              | |                         
-                                                                              |_|                         
+
+    ____  ___________________   _______ ___________   __
+   / __ \/ ____/ ____/ ____/ | / / ___// ____/  _/ | / /
+  / / / / __/ / /_  / __/ /  |/ /\__ \/ __/  / //  |/ / 
+ / /_/ / /___/ __/ / /___/ /|  /___/ / /____/ // /|  /  
+/_____/_____/_/   /_____/_/ |_//____/_____/___/_/ |_/   
+                                                        
+
+
 EOF
 
 }
@@ -52,17 +53,25 @@ function main() {
 
 	curl https://attack.mitre.org/ >mitre.txt 2>&1
 	mitre=$(grep -io "t[0-9][0-9][0-9][0-9]" mitre.txt  |sed -e 's/^\(.\)/\U\1/g' |sort | uniq |wc -l)  # Total Number of MITRE ATT&CK Techniques
-
+	grep -io "t[0-9][0-9][0-9][0-9]" mitre.txt  |sed -e 's/^\(.\)/\U\1/g' |sort | uniq >mitreattack.txt
 
 	curl -XGET -H "X-Auth-Token: $token" -H "Content-Type: application/json" "$url/api/v1/threat_report?cb.urlver=1&cb.fq.feed_name=attackframework&cb.fq.feed_name=bit9advancedthreats&cb.fq.feed_name=cbcommunity&cb.fq.feed_name=sans&cb.fq.feed_name=bit9endpointvisibility&cb.fq.feed_name=bit9suspiciousindicators&cb.fq.feed_name=bit9earlyaccess&sort=severity_score%20desc&rows=50000&facet=false&start=0&cb.fq.is_deleted=false" -k > out.txt 2>&1
-	RESULT=$(grep -io "t[0-9][0-9][0-9][0-9]" out.txt  |sed -e 's/^\(.\)/\U\1/g' |sort | uniq | wc -l)
-	
-	rm -rf out.txt				# Delete Output File
-	rm -rf mitre.txt			# Delete Output File
+	result=$(grep -io "t[0-9][0-9][0-9][0-9]" out.txt  |sed -e 's/^\(.\)/\U\1/g' |sort | uniq | wc -l)
+	grep -io "t[0-9][0-9][0-9][0-9]" out.txt  |sed -e 's/^\(.\)/\U\1/g' |sort | uniq >cbattack.txt
 
-	echo "###########################################################################################################"
-	echo "############       $RESULT out of $mitre MITRE ATT&CK Techniques Covered by CarbonBlack Response      ############"
-	echo "###########################################################################################################"
+
+	echo "===> $result out of $mitre MITRE ATT&CK Techniques Covered by CarbonBlack Response"
+	echo
+	echo "===>Following MITRE ATT&CK Techniques Covered"
+	cat cbattack.txt |paste -s -d, -
+	echo
+	echo "===>Following MITRE ATT&CK Techniques Not Covered"
+	echo
+	comm -13 cbattack.txt mitreattack.txt | paste -s -d, -
+
+
 }
 
 main
+
+rm -rf cbattack.txt mitreattack.txt out.txt mitre.txt    # Delete Output File
