@@ -1,40 +1,9 @@
 #!/bin/bash
 
-function usage() {								# Function: Exit with error.
-  echo usage: $0 -u CBR Server URL -t API Token >&2
-}
+function banner()                               # Function: Banner.
+{
 
-exit_abnormal() {								# Function: Exit with error.
-  usage
-  exit 1
-}
-
-
-while getopts ":u:t:" option;
-do
- case "${option}" in
-	u) url=${OPTARG};;
-	t) token=${OPTARG};;
-	:) 										  # If expected argument omitted:
-		echo "Error: -${OPTARG} requires an argument."
-		exit_abnormal
-		;;
-	*)                                         # If unknown (any other) option:
-		exit_abnormal
-		;;
- esac
-done
-
-
-shift $((OPTIND-1))
-if [ -z "${url}" ] || [ -z "${token}" ]
-	then
-		exit_abnormal
-	fi
-
-function banner(){
-
-cat << "EOF"
+    cat << "EOF"
 
     ____  ___________________   _______ ___________   __
    / __ \/ ____/ ____/ ____/ | / / ___// ____/  _/ | / /
@@ -48,7 +17,94 @@ EOF
 
 }
 
-function main() {
+
+function usage()                                # Function: Exit with error.
+{
+  echo usage: $0 -u CBR Server URL -t API Token >&2
+  exit 1
+
+}
+
+
+while getopts ":u:t:" option;
+do
+ case "${option}" in
+    u) url=${OPTARG};;
+    t) token=${OPTARG};;
+    :)                                        # If expected argument omitted:
+        echo "Error: -${OPTARG} requires an argument."
+        usage
+        ;;
+    *)                                         # If unknown (any other) option:
+        usage
+        ;;
+ esac
+done
+
+
+shift $((OPTIND-1))
+if [ -z "${url}" ] || [ -z "${token}" ]
+    then
+        usage
+    fi
+
+function JSON()                                # Function: Save MITRE Navigator compatible JSON file.
+{
+    echo '{
+        "description": "", 
+        "domain": "mitre-enterprise", 
+        "filters": {
+            "platforms": [
+                "windows"
+            ], 
+            "stages": [
+                "act"
+            ]
+        }, 
+        "gradient": {
+            "colors": [
+                "#ff6666", 
+                "#ffe766", 
+                "#8ec843"
+            ], 
+            "maxValue": 100, 
+            "minValue": 0
+        }, 
+        "hideDisabled": false, 
+        "legendItems": [], 
+        "name": "Cb Response - Windows", 
+        "selectTechniquesAcrossTactics": true, 
+        "showTacticRowBackground": false, 
+        "sorting": 0, 
+        "tacticRowBackground": "#dddddd", 
+        "techniques": [' >CbResponseNavigator.json
+
+
+    while IFS= read -r line
+    do
+        echo "  {
+             \"color\": \"#00ff61\",
+         \"techniqueID\": \"$line\"
+        },"
+    done <cbattack.txt >>CbResponseNavigator.json
+
+    sed -i '$ s/.$//' CbResponseNavigator.json
+
+    echo '],
+        "version": "2.1", 
+        "viewMode": 0
+    }'>>CbResponseNavigator.json
+
+    echo
+    echo "[!]Saved MITRE Navigator json file as CbResponseNavigator.json"
+    echo "[!]Use this file to 'Open Existing Layer' from local file on https://mitre.github.io/attack-navigator/enterprise/"
+
+}
+
+
+
+function main()                                 # Main Function: Gather the covarege from CB threat feeds.
+{
 	banner
 
 	curl https://attack.mitre.org/ >mitre.txt 2>&1
@@ -60,18 +116,16 @@ function main() {
 	grep -io "t[0-9][0-9][0-9][0-9]" out.txt  |sed -e 's/^\(.\)/\U\1/g' |sort | uniq >cbattack.txt
 
 
-	echo "===> $result out of $mitre MITRE ATT&CK Techniques Covered by CarbonBlack Response"
+	echo "[!] $result out of $mitre MITRE ATT&CK Techniques Covered by CarbonBlack Response"
 	echo
-	echo "===>Following MITRE ATT&CK Techniques Covered"
+	echo "[!]Following MITRE ATT&CK Techniques Covered"
 	cat cbattack.txt |paste -s -d, -
 	echo
-	echo "===>Following MITRE ATT&CK Techniques Not Covered"
-	echo
-	comm -13 cbattack.txt mitreattack.txt | paste -s -d, -
-
-
+	echo "[!]Following MITRE ATT&CK Techniques Not Covered"
+	comm -13 cbattack.txt mitreattack.txt |paste -s -d, -
 }
 
 main
+JSON
 
 rm -rf cbattack.txt mitreattack.txt out.txt mitre.txt    # Delete Output File
