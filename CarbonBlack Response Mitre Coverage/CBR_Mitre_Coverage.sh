@@ -129,9 +129,14 @@ function main()                                 # Main Function: Gather the cova
 
 	echo "[!] $totalresult ($resultwatchlist from Watchlists, $resultfeed from CB Threat Intel Feeds ) out of $mitre MITRE ATT&CK Techniques Covered by CarbonBlack Response"
 	echo
-	echo "[!]Following MITRE ATT&CK Techniques Covered "
-	cat totalattack.json |paste -s -d, -
+	echo "[!]Following MITRE ATT&CK Techniques Covered by Threat Feeds"
+	cat feedattack.json |paste -s -d, -
 	echo
+	echo "[!]Following MITRE ATT&CK Techniques Covered by Watchlists"
+        cat watchlistattack.json |paste -s -d, -
+       	echo
+
+
 	echo "[!]Following MITRE ATT&CK Techniques Not Covered"
 	comm -13 totalattack.json mitreattack.json |paste -s -d, -
 }
